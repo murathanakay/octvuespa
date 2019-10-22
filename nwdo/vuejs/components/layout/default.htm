@@ -1,0 +1,190 @@
+<script>
+
+    $(document).ready(function () {
+
+        var DEFAULT_TITLE = '{{ this.theme.theme_site_name }}';
+
+        Vue.use(VueRouter);
+
+        var App = Vue.extend({
+            components: parseComponentsList(JSON.parse('{{vueComponents|json_encode()|raw}}'))
+        });
+
+        // var Router = new VueRouter({{router_options|json_encode|raw}});
+
+        $(document).ajaxSend(function () {
+            $.oc.stripeLoadIndicator.show();
+        });
+        $(document).ajaxComplete(function () {
+             $.oc.stripeLoadIndicator.hide();
+        });
+
+
+        var baseUrl = "{{ baseUrl }}";
+        if (baseUrl != '/') {
+            baseUrl = '/' + baseUrl;
+        }
+
+
+        var options = {
+            'routes': [
+                {% for page in pages %}
+        {% if page.url != this.page.url %}
+        {
+            path: '{{ page.url}}',
+                component: getPageComponent('{{ page.url}}'),
+                    meta: {
+                bodyClass: '{{ page.id}} {{ page.page_custom_class}}',
+                    title: '{{ page.title }}',
+                        description: '{{ page.meta_description}}'
+            }
+        },
+        {% endif %}
+        {% endfor %}                       
+                    ]
+    };
+
+
+    //current path
+    options['routes'].push({
+        path: '{{ this.page.url }}',
+                component: {
+                            template: '#main-view',
+                                    beforeRouteEnter(to, from, next) {
+                            next(vm => {
+                                        console.log(next);
+                            myApp.reinit(to, from, next);
+                            });
+                            }
+                            },
+                            meta: {
+                            bodyClass: '{{ this.page.id}} {{ this.page.page_custom_class}}',
+                                    title: '{{ this.page.title }}'
+                            }
+                    });
+    options['base'] = '/';
+
+    var opts = {{ router_options| json_encode | raw}};
+    $.extend(opts, options);
+    // Router.map(routerMap);
+    var Router = new VueRouter(opts);
+    console.log('opts', opts);
+    // Router.start(App, '{{el}}');
+    var App = new Vue({
+        // render: h => h(App),
+        router: Router,
+                // render: h => h('router-view')
+                mounted: function() {
+
+                myApp.init();
+                }
+        }).$mount("{{el}}");
+    //fix oc ajax framework request url
+    Router.beforeEach(function (to, from, next) {
+        var path = to.path;
+        if (baseUrl != '/') {
+            path = baseUrl + path;
+        }
+
+        $.ajaxSetup({
+            url: path
+        });
+
+        console.log('to: ', to.path, 'from:', from.path);
+
+        if (to.path != from.path)
+            next();
+    });
+
+    Router.beforeResolve(function (to, from, next) {
+
+        console.log(to)
+
+
+        //set body class for current page
+        document.getElementsByTagName("BODY")[0].className = ('page-' + to.meta.bodyClass);
+        next();
+    });
+
+    Router.afterEach(function(to, from) {
+        document.getElementsByTagName('title')[0].innerHTML = ((to.path != '/' ? (to.meta.title + ' - ') : '') + '{{ this.theme.theme_site_name}}');
+        //set js works on the road again.
+            if (myApp.initialised){
+		
+                }
+		
+    });
+
+    Router.onReady(function(to, from) {
+//        if (myApp.initialised){
+//        myApp.reinit();
+//        }
+    });
+    // Router.redirect({
+    //   '*': '/404'
+    // });
+
+    // multiple version of jQuery.getScript()
+    $.getMultiScripts = function (arr, path) {
+        var _arr = $.map(arr, function (scr) {
+            return $.getScript((path || "") + scr);
+        });
+
+        _arr.push($.Deferred(function (deferred) {
+            $(deferred.resolve);
+        }));
+
+        return $.when.apply($, _arr);
+    }
+
+    // returns vue component for page
+    function getPageComponent(url) {
+
+        return function (resolve, reject) {
+            //request page data (template, assets, vue components)
+            $.ajax(url, {
+                cache: true,
+                success: function (data, status, request) {
+                    //download and execute javascripts
+                    $.getMultiScripts(data.assets.js).done(function () {
+                        var components = parseComponentsList(data.components);
+                        //return complete vue component
+                        resolve({
+                            template: data.template,
+                                                beforeRouteEnter(to, from, next) {
+                                        next(vm => {
+                                        myApp.reinit(to, from, next, data.pageObj);
+                                        });
+                                        },
+                            components: components,
+                        });
+                    });
+                    //download and attach css styles
+                    data.assets.css.forEach(function (item, i, arr) {
+                        $('<link/>', {
+                            rel: 'stylesheet',
+                            type: 'text/css',
+                            href: item
+                        }).appendTo('head');
+                    });
+                }
+            });
+
+        }
+    };
+
+
+
+    function parseComponentsList(components_arr) {
+        //all page's vue components
+        var components = {};
+        for (var compTag in components_arr) {
+            var compName = components_arr[compTag];
+            components[compTag] = eval(compName);
+        }
+
+        return components
+    }
+    
+    });
+</script>

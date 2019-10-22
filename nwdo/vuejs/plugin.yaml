@@ -1,0 +1,6 @@
+plugin:
+    name: 'nwdo.vuejs::lang.plugin.name'
+    description: 'nwdo.vuejs::lang.plugin.description'
+    author: Xneda Team
+    icon: oc-icon-code
+    homepage: ''
