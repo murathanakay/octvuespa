@@ -1,5 +1,5 @@
 # octvuespa
-October CMS Plugin to Create Single Page Application with Vue.js + Vue Router
+October CMS Plugin to Create Single Page Application with OctoberCMS JavaScript Framework + jQuery + Vue.js + Vue Router
 
 <ul>
   <li>Copy "nwdo" to the plugin directory of OCTOBERCMS.</li>
